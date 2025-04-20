@@ -18,7 +18,7 @@ setInterval(() => {
   getQueuedMessages();
 }, 2 * 1000);
 
-//const targetUrl = 'http://localhost:3000/';
+const targetUrl = 'http://localhost:3000/';
 
 function sendChatHistory() {
   if (lastChatHistoryString === JSON.stringify(getContext().chat)) {
