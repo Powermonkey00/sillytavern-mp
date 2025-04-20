@@ -1,3 +1,6 @@
+# Demo
+https://youtu.be/VJdt-vAZbLo
+
 This is an unofficial extension for SillyTavern that adds multiplayer.
 
 The way it works is as follows:
