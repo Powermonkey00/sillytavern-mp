@@ -6,9 +6,9 @@ This is an unofficial extension for SillyTavern that adds multiplayer.
 The way it works is as follows:
 - There is an extension that the host has to install into their SillyTavern instance
 - This extension communicates with a server, sending it the chat history as well as reading out any queued messages
-- The server has a front-end where you can see the chat history and send messages, sent messages get queued up and area read out by the extension
+- The server has a front-end where you can see the chat history and send messages, sent messages get queued up and are read out by the extension
 
-This is for advanced use and requires you to expose the server to the internet, so that your friends can hop on the front-end and send messages.
+This is for advanced use and requires you to expose the server to the internet (your SillyTavern instance can keep running locally), so that your friends can hop on the front-end and send messages.
 
 # Setup
 - Host the server (which is a Nodejs application) somewhere and tell your friends to open it in their browser, this is how they will read the chat history and send messages
