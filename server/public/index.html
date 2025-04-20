@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SillyTavern Client</title>
+    <style>
+        body {
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            font-family: sans-serif;
+        }
+
+        #chat {
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 128px); /* Limit the height to 80% of the viewport */
+            overflow-y: auto; /* Enable vertical scrolling if content overflows */
+        }
+
+        #chat .message {
+            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+            border-radius: 15px;
+            padding: 10px 15px;
+            margin: 5px 0;
+            max-width: 80%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #chat .message .title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+
+        #chat .message.user {
+            background: linear-gradient(135deg, #d1e7ff, #a8d8ff);
+            align-self: flex-end;
+        }
+
+        #chat .message.bot {
+            background: linear-gradient(135deg, #f9f9f9, #eaeaea);
+            align-self: flex-start;
+        }
+
+        #chat .message.user.ghost {
+            opacity: 0.5;
+        }
+
+        #chat-input {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 700px;
+            background-color: #ffffff;
+            padding: 10px;
+            margin-bottom: 32px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #chat-input input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        #chat-input input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+        #character-name {
+            position: absolute;
+            right: 100%;
+            top: 0;
+            width: 300px;
+            background-color: #eee;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat">
+
+    </div>
+
+    <div id="chat-input">
+        <input type="text" id="message" placeholder="Type your message here..." />
+        <div id="character-name">
+            <label for="name">Send messages as</label>
+            <input type="text" id="name" placeholder="Character Name" value="Liam" />
+        </div>    
+    </div>
+    
+    <script>
+        let lastHistoryString = '';
+
+        async function fetchChatHistory() {
+            const response = await fetch('/get-chat');
+            const chatHistory = await response.json();
+
+            const chatHistoryString = JSON.stringify(chatHistory);
+            if (chatHistoryString === lastHistoryString) {
+                return;
+            }
+            lastHistoryString = chatHistoryString;
+
+            const chatDiv = document.getElementById('chat');
+            chatDiv.innerHTML = ''; // Clear existing messages
+            chatHistory.forEach(message => {
+                const messageDiv = document.createElement('div');
+                
+                const { name , is_user, mes } = message;
+                
+                const messageTitle = document.createElement('div');
+                messageTitle.className = 'title';
+                messageTitle.textContent = name;
+                
+                messageDiv.appendChild(messageTitle);
+                messageDiv.innerHTML += mes; // Append the message content
+                messageDiv.className = 'message' + (is_user ? ' user' : ' bot');
+
+                // surround * by italic tags:
+                messageDiv.innerHTML = messageDiv.innerHTML.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+                chatDiv.appendChild(messageDiv);
+            });
+
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        fetchChatHistory();
+        setInterval(fetchChatHistory, 2 * 1000);
+
+        function appendGhostUserMessage(name, message) {
+            const chatDiv = document.getElementById('chat');
+            const messageDiv = document.createElement('div');            
+            
+            const messageTitle = document.createElement('div');
+            messageTitle.className = 'title';
+            messageTitle.textContent = name;
+            
+            messageDiv.appendChild(messageTitle);
+            messageDiv.innerHTML += message;
+            messageDiv.className = 'message user ghost';
+
+            // surround * by italic tags:
+            messageDiv.innerHTML = messageDiv.innerHTML.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+            chatDiv.appendChild(messageDiv);
+        }
+
+        const messageInput = document.getElementById('message');
+        messageInput.addEventListener('keydown', async (event) => {
+            if (event.key === 'Enter') {
+                const message = messageInput.value;
+                const name = document.getElementById('name').value;
+                if (message.trim() === '') return; // Ignore empty messages
+
+                // Send the message to the server
+                await fetch('/queue-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message, name })
+                });
+
+                appendGhostUserMessage(name, message);
+
+                messageInput.value = ''; // Clear the input field
+            }
+        });
+    </script>
+</body>
+</html>
