@@ -11,7 +11,7 @@ The way it works is as follows:
 This is for advanced use and requires you to expose the server to the internet, so that your friends can hop on the front-end and send messages.
 
 # Setup
-- Host the server somewhere and tell your friends to open it in their browser, this is how they will read the chat history and send messages
+- Host the server (which is a Nodejs application) somewhere and tell your friends to open it in their browser, this is how they will read the chat history and send messages
 - You must configure the extension to point to the server's address, where it says `const targetUrl = 'http://localhost:3000/';` in `silly-tavern-mp-extension/index.js`
 - Run your SillyTavern instance with the extension installed
 - Have fun, it's recommended to send messages yourself via the server front-end and not from within SillyTavern, as the extension will queue-up any messages sent from the server
