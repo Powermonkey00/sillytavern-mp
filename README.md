@@ -3,6 +3,11 @@ You now specify the location of your sillytavern install in config.json instead 
 Character portraits, groups, and lore are all now visible, and the user can choose personas from a dropdown menu in the lower left corner.
 
 
+
+
+# Original Readme:
+
+
 # Demo
 https://youtu.be/VJdt-vAZbLo
 
