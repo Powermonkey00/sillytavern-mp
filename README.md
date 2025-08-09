@@ -1,6 +1,7 @@
 # What's New
 An update to sillytavern-mp to improve the interface and the backend.  
 You now specify the location of your sillytavern install in config.json instead of needing to edit index.js directly.
+
 Character portraits, groups, and lore are all now visible, and the user can choose personas from a dropdown menu in the lower left corner.
 
 
