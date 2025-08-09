@@ -1,187 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SillyTavern Client</title>
-    <style>
-        body {
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-            font-family: sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SillyTavern Client</title>
 
-        #chat {
-            display: flex;
-            flex-direction: column;
-            max-height: calc(100vh - 128px); /* Limit the height to 80% of the viewport */
-            overflow-y: auto; /* Enable vertical scrolling if content overflows */
-        }
+  <!-- Fonts to match ST vibe -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 
-        #chat .message {
-            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-            border-radius: 15px;
-            padding: 10px 15px;
-            margin: 5px 0;
-            max-width: 80%;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #chat .message .title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
+  <style>
+    /* ===== ST-like palette ===== */
+    :root{
+      --st-bg:#0f1115;
+      --st-surface:#15181e;
+      --st-surface-2:#1b1f26;
+      --st-text:#e6e6e6;
+      --st-sub:#aab2bf;
+      --st-accent:#7aa2f7;
+      --st-warn:#ff9e64;
+      --st-border:#2b3038;
+      --shadow:0 6px 18px rgba(0,0,0,.35);
+      --radius:12px;
+      --radius-lg:14px;
+      --pad:12px;
+    }
+/* hide SillyTavern top system bar */
 
 
-        #chat .message.user {
-            background: linear-gradient(135deg, #d1e7ff, #a8d8ff);
-            align-self: flex-end;
-        }
+    html, body {
+      height:100%;
+      background:var(--st-bg);
+      color:var(--st-text);
+      font-family:"Inter",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+      margin:0;
+    }
 
-        #chat .message.bot {
-            background: linear-gradient(135deg, #f9f9f9, #eaeaea);
-            align-self: flex-start;
-        }
+    /* Layout: optional character sidebar */
+    body {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 12px 12px 160px; /* bottom space for fixed input */
+      box-sizing:border-box;
+    }
+    body.with-sidebar{
+      max-width:none;
+      margin-right:300px; /* room for sidebar */
+    }
 
-        #chat .message.user.ghost {
-            opacity: 0.5;
-        }
+    /* Sidebar (auto-hidden if ST API not reachable) */
+/*     #st-characters{
+      position:fixed; inset:0 auto 0 0; width:280px; display:none;
+      background:var(--st-surface);
+      border-right:1px solid var(--st-border);
+      padding:12px; overflow:auto; z-index:5;
+      box-shadow:var(--shadow);
+    } */
+     #st-characters{
+   position:fixed; inset:0 0 0 auto; width:280px; display:none;
+   background:var(--st-surface);
+   border-left:1px solid var(--st-border);
+   padding:12px; overflow:auto; z-index:5;
+   box-shadow:var(--shadow);
+   }
+    #st-characters h3{ margin:0 0 10px; font-weight:800; font-size:16px; }
+    .st-char{
+      display:flex; gap:10px; align-items:center;
+      background:var(--st-surface-2);
+      border:1px solid var(--st-border);
+      border-radius:12px; padding:8px; margin-bottom:8px; cursor:default;
+    }
+    .st-char img{ width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--st-border); }
+    .st-char .nm{ font-weight:700; }
+    .st-char .tags{ opacity:.7; font-size:.85em; }
+#st-detail{
+  background:var(--st-surface-2);
+  border:1px solid var(--st-border);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:10px;
+}
+#st-detail h3{ margin:0 0 8px; }
+#st-detail .line{ height:1px; background:linear-gradient(90deg,transparent,var(--st-warn),transparent); opacity:.6; margin:8px 0; }
 
-        #chat-input {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            margin-left: auto;
-            margin-right: auto;
-            max-width: 700px;
-            background-color: #ffffff;
-            padding: 10px;
-            margin-bottom: 32px;
-            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-        }
+    /* Chat container */
+    #chat{
+      display:flex; flex-direction:column; gap:10px;
+      max-height: calc(100vh - 220px);
+      overflow-y:auto;
+    }
 
-        #chat-input input {
-            width: calc(100% - 20px);
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-        }
+    /* Message bubbles */
+    #chat .message{
+      background:var(--st-surface-2);
+      border:1px solid var(--st-border);
+      border-radius:var(--radius-lg);
+      padding:10px 14px;
+      max-width:80%;
+      box-shadow:var(--shadow);
+      display:flex; flex-direction:column;
+    }
+    #chat .message .title{
+      font-weight:800; margin-bottom:6px; color:var(--st-text);
+    }
+    #chat .message.user{ align-self:flex-end; background:#1e2633; }
+    #chat .message.bot{  align-self:flex-start; background:#20232a; }
+    #chat .message.user.ghost{ opacity:.55; }
 
-        #chat-input input:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-        }
+    /* Input area */
+    #chat-input{
+      position:fixed; left:0; right:0; bottom:0;
+      margin:0 auto 20px;
+      max-width:820px;
+      background:var(--st-surface);
+      border:1px solid var(--st-border);
+      border-radius:var(--radius);
+      padding:10px;
+      box-shadow:var(--shadow);
+    }
+    body.with-sidebar #chat-input{ margin-left:300px; max-width:none; width: min(1100px, calc(100% - 340px)); }
 
-        #character-name {
-            position: absolute;
-            right: 100%;
-            top: 0;
-            width: 300px;
-            background-color: #eee;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+    #chat-input input{
+      width:100%;
+      background:var(--st-surface-2);
+      color:var(--st-text);
+      border:1px solid var(--st-border);
+      border-radius:10px;
+      padding:12px 14px; font-size:16px;
+      outline:none;
+    }
+    #chat-input input::placeholder{ color:#7a838f; }
+    #chat-input input:focus{ border-color:var(--st-accent); box-shadow:0 0 0 3px rgba(122,162,247,.2); }
+#st-characters .tab{
+  flex:1; background:var(--st-surface-2); border:1px solid var(--st-border);
+  border-radius:10px; padding:8px; font-weight:700; cursor:pointer;
+}
+#st-characters .tab.on{ background:var(--st-accent); color:#0b0d11; }
+/* container: let it grow with content */
+#chat-input{
+  position:fixed; left:0; right:0; bottom:0;
+  margin:0 auto 20px;
+  max-width:820px;
+  background:var(--st-surface);
+  border:1px solid var(--st-border);
+  border-radius:var(--radius);
+  padding:10px;
+  box-shadow:var(--shadow);
+  display:flex; gap:10px; align-items:flex-start;  /* new */
+}
+
+/* textarea fills the box, auto-grows */
+#chat-input textarea{
+  width:100%;
+  background:var(--st-surface-2);
+  color:var(--st-text);
+  border:1px solid var(--st-border);
+  border-radius:10px;
+  padding:12px 14px;
+  font-size:16px;
+  line-height:1.35;
+  outline:none;
+  resize:none;         /* user can’t drag handle */
+  overflow:hidden;     /* we’ll show scrollbar only at hard max */
+  box-sizing:border-box;
+}
+#chat-input textarea:focus{
+  border-color:var(--st-accent);
+  box-shadow:0 0 0 3px rgba(122,162,247,.2);
+}
+
+    /* “Send as” mini panel */
+    #character-name{
+      position:absolute; right:100%; top:0;
+      width:260px; background:var(--st-surface);
+      border:1px solid var(--st-border);
+      border-radius:var(--radius);
+      padding:10px; box-shadow:var(--shadow);
+    }
+    #character-name label{ display:block; font-size:.9em; color:var(--st-sub); margin-bottom:6px; }
+    #character-name input{
+      width:100%; background:var(--st-surface-2); color:var(--st-text);
+      border:1px solid var(--st-border); border-radius:8px; padding:8px 10px;
+    }
+
+    /* Code look (if any) */
+    code, pre{
+      font-family:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      background:#0e1218; border:1px solid var(--st-border); border-radius:10px;
+      color:#c9d1d9; padding:.35rem .5rem;
+    }
+
+    /* Decorative divider option */
+    .section-divider{
+      height:1px; margin:12px 0;
+      background:linear-gradient(90deg, transparent, var(--st-warn), transparent);
+      opacity:.6;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="chat">
+  <!-- Optional: character sidebar (auto shown if ST API reachable) -->
+<aside id="st-characters" style="display:block">
+  <div style="display:flex;gap:8px;margin-bottom:8px;">
+    <button class="tab on" data-tab="chars">Characters</button>
+    <button class="tab" data-tab="lore">Lorebooks</button>
+    <button class="tab" data-tab="groups">Groups</button>
+  </div>
+  <div id="st-detail" style="display:none"></div>
+  <div id="st-char-list"></div>
+  <div id="st-lore-list" style="display:none"></div>
+  <div id="st-group-list" style="display:none"></div>
+</aside>
+<!-- Lorebooks panel -->
+<section id="lore-pane" style="display:none; border-left:1px solid var(--st-border); border:1px solid var(--st-border); border-radius:12px; padding:12px; background:var(--st-surface); margin-bottom:10px;">
+  <div style="display:flex; align-items:center; gap:8px;">
+    <h3 id="lb-entry-title" style="margin:0; flex:1;">Details</h3>
+    <button id="lb-close" title="Hide details" style="background:transparent;border:1px solid var(--st-border);border-radius:8px;padding:4px 8px;color:var(--st-text);cursor:pointer;">✖</button>
+  </div>
+  <div id="lb-detail" style="white-space:pre-wrap; opacity:.95; margin-top:8px;"></div>
+</section>
 
-    </div>
 
-    <div id="chat-input">
-        <input type="text" id="message" placeholder="Type your message here..." />
-        <div id="character-name">
-            <label for="name">Send messages as</label>
-            <input type="text" id="name" placeholder="Character Name" value="Liam" />
-        </div>    
-    </div>
-    
-    <script>
-        let lastHistoryString = '';
 
-        async function fetchChatHistory() {
-            const response = await fetch('/get-chat');
-            const chatHistory = await response.json();
 
-            const chatHistoryString = JSON.stringify(chatHistory);
-            if (chatHistoryString === lastHistoryString) {
-                return;
-            }
-            lastHistoryString = chatHistoryString;
+  <div id="chat"></div>
 
-            const chatDiv = document.getElementById('chat');
-            chatDiv.innerHTML = ''; // Clear existing messages
-            chatHistory.forEach(message => {
-                const messageDiv = document.createElement('div');
-                
-                const { name , is_user, mes } = message;
-                
-                const messageTitle = document.createElement('div');
-                messageTitle.className = 'title';
-                messageTitle.textContent = name;
-                
-                messageDiv.appendChild(messageTitle);
-                messageDiv.innerHTML += mes; // Append the message content
-                messageDiv.className = 'message' + (is_user ? ' user' : ' bot');
+  <div id="chat-input">
+    <textarea id="message" rows="1" placeholder="Type your message here..."></textarea>
+ <div id="character-name">
+  <label for="sender">Send messages as</label>
+  <select id="sender"></select>
+</div>
 
-                // surround * by italic tags:
-                messageDiv.innerHTML = messageDiv.innerHTML.replace(/\*(.*?)\*/g, '<i>$1</i>');
+  </div>
 
-                chatDiv.appendChild(messageDiv);
-            });
+<script>
+async function jget(u){ const r = await fetch(u); if(!r.ok) throw new Error(u); return r.json(); }
 
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-        }
+function titleForEntry(e){
+  if (e?.comment && e.comment.trim()) return e.comment.trim();
+  const keys = e?.keys || e?.key || e?.keywords || [];
+  if (Array.isArray(keys) && keys.length) return String(keys[0]);
+  return `Entry ${e?.uid ?? ''}`;
+}
+function cleanContent(s){
+  if (!s) return '';
+  return s.replace(/\{\{\s*(user|char|system)\s*\}\}:\s*/gi, '').trim();
+}
+function sortEntries(a,b){
+  const ax = (a?.displayIndex ?? a?.order ?? a?.uid ?? 0);
+  const bx = (b?.displayIndex ?? b?.order ?? b?.uid ?? 0);
+  return ax - bx;
+}
+function showLorePane() {
+  document.getElementById('lore-pane').style.display = 'block';
+}
+function hideLorePane() {
+  const pane = document.getElementById('lore-pane');
+  pane.style.display = 'none';
+  document.getElementById('lb-entry-title').textContent = 'Details';
+  document.getElementById('lb-detail').textContent = '';
+}
+function autosizeTextarea(el){
+  const maxPx = Math.round(window.innerHeight * 0.3); // ~30vh cap
+  el.style.height = 'auto';
+  const nh = Math.min(el.scrollHeight, maxPx);
+  el.style.height = nh + 'px';
+  el.style.overflowY = (el.scrollHeight > maxPx) ? 'auto' : 'hidden';
+  // keep page bottom padding in sync so chat isn’t hidden behind the fixed box
+  document.body.style.paddingBottom = (document.getElementById('chat-input').offsetHeight + 20) + 'px';
+}
 
-        fetchChatHistory();
-        setInterval(fetchChatHistory, 2 * 1000);
+async function loadLore() {
+  const res = await fetch('/lorebooks'); if(!res.ok) return;
+  const items = await res.json();
+  const list = document.getElementById('st-lore-list'); list.innerHTML='';
 
-        function appendGhostUserMessage(name, message) {
-            const chatDiv = document.getElementById('chat');
-            const messageDiv = document.createElement('div');            
-            
-            const messageTitle = document.createElement('div');
-            messageTitle.className = 'title';
-            messageTitle.textContent = name;
-            
-            messageDiv.appendChild(messageTitle);
-            messageDiv.innerHTML += message;
-            messageDiv.className = 'message user ghost';
+  items.sort((a,b)=>a.name.localeCompare(b.name));
 
-            // surround * by italic tags:
-            messageDiv.innerHTML = messageDiv.innerHTML.replace(/\*(.*?)\*/g, '<i>$1</i>');
+  items.forEach(lb=>{
+    const el = document.createElement('div');
+    el.className='st-char';
+    el.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:8px;border:1px solid var(--st-border);background:#0e1218"></div>
+      <div>
+        <div class="nm">${lb.name}</div>
+        <div class="tags">${lb.entries} entries</div>
+      </div>`;
+    el.onclick = ()=> openLorebookInSidebar(lb.id, lb.name);
+    list.appendChild(el);
+  });
+}
 
-            chatDiv.appendChild(messageDiv);
-        }
+async function openLorebookInSidebar(id, displayName){
+  const data = await (await fetch('/lorebooks/'+encodeURIComponent(id))).json();
+  const entries = Array.isArray(data.entries) ? data.entries.slice().sort(sortEntries) : [];
+  const box = document.getElementById('st-detail');
 
-        const messageInput = document.getElementById('message');
-        messageInput.addEventListener('keydown', async (event) => {
-            if (event.key === 'Enter') {
-                const message = messageInput.value;
-                const name = document.getElementById('name').value;
-                if (message.trim() === '') return; // Ignore empty messages
+  const listHtml = entries.map((e,i)=>`
+    <div class="lb-entry" data-idx="${i}" style="padding:6px 8px; border-radius:6px; cursor:pointer;">
+      ${titleForEntry(e)}
+    </div>`).join('');
 
-                // Send the message to the server
-                await fetch('/queue-message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message, name })
-                });
+  box.style.display = 'block';
+  box.innerHTML = `
+    <h3 style="margin:0 0 8px;">${displayName || data.name || id}</h3>
+    <div class="line"></div>
+    <div id="lb-entries-side">${listHtml || '<i>No entries</i>'}</div>
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button class="tab" onclick="document.getElementById('st-detail').style.display='none'">Close</button>
+    </div>`;
 
-                appendGhostUserMessage(name, message);
+  const pane = document.getElementById('lore-pane');
+  const titleEl = document.getElementById('lb-entry-title');
+  const detailEl = document.getElementById('lb-detail');
 
-                messageInput.value = ''; // Clear the input field
-            }
-        });
-    </script>
+  box.querySelectorAll('.lb-entry').forEach(div=>{
+    div.addEventListener('mouseenter', ()=> div.style.background='rgba(255,255,255,0.06)');
+    div.addEventListener('mouseleave', ()=> div.style.background='transparent');
+    div.addEventListener('click', ()=>{
+      const e = entries[Number(div.dataset.idx)];
+      titleEl.textContent = titleForEntry(e);
+      detailEl.textContent = cleanContent(e.content || e.description || '');
+      showLorePane();
+
+      // optional: scroll chat into view after updating lore
+      // document.getElementById('chat').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  if (entries.length){
+    const first = box.querySelector('.lb-entry'); if (first) first.click();
+  }
+  document.getElementById('st-characters').scrollTop = 0;
+}
+let CHAR_CACHE = null;
+
+async function fetchCharacters(){
+  if (CHAR_CACHE) return CHAR_CACHE;
+  const res = await fetch('/characters');
+  if (!res.ok) return [];
+  CHAR_CACHE = await res.json();
+  return CHAR_CACHE;
+}
+
+async function populateNameDropdown() {
+  try {
+    const res = await fetch('/personas');
+    if (!res.ok) throw new Error('Failed to load personas');
+    const names = await res.json();
+    const select = document.getElementById('sender');
+    select.innerHTML = '';
+    names.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = n;
+      select.appendChild(opt);
+    });
+    if (names.length) select.value = names[0];
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+
+
+
+// call after page load
+
+    /* ===== CONFIG =====
+       Set this to your SillyTavern URL if you want the Characters sidebar.
+       Leave blank ("") to disable.
+    */
+    const ST_API_BASE = "http://127.0.0.1:8000"; // SillyTavern default dev port. Change if needed.
+
+    let lastHistoryString = '';
+
+    async function fetchChatHistory() {
+      const response = await fetch('/get-chat');
+      const chatHistory = await response.json();
+
+      const chatHistoryString = JSON.stringify(chatHistory);
+      if (chatHistoryString === lastHistoryString) return;
+      lastHistoryString = chatHistoryString;
+
+      const chatDiv = document.getElementById('chat');
+      chatDiv.innerHTML = '';
+
+      chatHistory.forEach(({ name, is_user, mes }) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message' + (is_user ? ' user' : ' bot');
+
+        const messageTitle = document.createElement('div');
+        messageTitle.className = 'title';
+        messageTitle.textContent = name;
+
+        // message body
+        const bodyDiv = document.createElement('div');
+        bodyDiv.innerHTML = mes;
+
+        // italicize *like this*
+        bodyDiv.innerHTML = bodyDiv.innerHTML.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+        messageDiv.appendChild(messageTitle);
+        messageDiv.appendChild(bodyDiv);
+        chatDiv.appendChild(messageDiv);
+      });
+
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+function showDetailInSidebar(html){
+  const box = document.getElementById('st-detail');
+  box.style.display = 'block';
+  box.innerHTML = html + '<div style="margin-top:8px;display:flex;gap:8px;">' +
+    '<button class="tab" onclick="document.getElementById(\'st-detail\').style.display=\'none\'">Close</button>' +
+  '</div>';
+  // keep the box visible at top
+  document.getElementById('st-characters').scrollTop = 0;
+}
+
+async function loadChars() {
+  try {
+    const res = await fetch('/characters'); // <-- MP server endpoint
+    if (!res.ok) return;
+    const chars = await res.json();
+
+    const list = document.getElementById('st-char-list');
+    list.innerHTML = '';
+
+    chars.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'st-char';
+      const avatar = c.avatar || c.avatar_url || '';
+      el.innerHTML = `
+        ${avatar ? `<img src="${avatar}" alt="">`
+                 : `<div style="width:36px;height:36px;border-radius:50%;border:1px solid var(--st-border);background:#0e1218;display:flex;align-items:center;justify-content:center;font-weight:800;">${(c.name||'?').slice(0,1)}</div>`}
+        <div>
+          <div class="nm">${c.name || 'Unnamed'}</div>
+          <div class="tags">${(c.tags || []).join(', ')}</div>
+        </div>`;
+      el.title = c.description || '';
+      list.appendChild(el);
+    });
+
+    // make sure sidebar/layout are on
+    document.getElementById('st-characters').style.display = 'block';
+    document.body.classList.add('with-sidebar');
+  } catch (e) {
+    // silent fail is fine
+  }
+}
+
+    // initial loads
+    fetchChatHistory();
+    setInterval(fetchChatHistory, 2000);
+    document.body.classList.add('with-sidebar');
+
+  
+
+    function appendGhostUserMessage(name, message) {
+      const chatDiv = document.getElementById('chat');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message user ghost';
+
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = name;
+
+      const body = document.createElement('div');
+      body.innerHTML = message.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+      messageDiv.appendChild(title);
+      messageDiv.appendChild(body);
+      chatDiv.appendChild(messageDiv);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+document.body.classList.add('with-sidebar'); // keep layout shifted
+
+
+
+async function loadGroups() {
+  const res = await fetch('/groups'); if(!res.ok) return;
+  const items = await res.json();
+  const list = document.getElementById('st-group-list'); list.innerHTML='';
+  items.forEach(g=>{
+    const el = document.createElement('div');
+    el.className='st-char'; // reuse card style
+    el.innerHTML = `
+      ${g.avatar?`<img src="${g.avatar}" style="border-radius:8px">`:`<div style="width:36px;height:36px;border-radius:8px;border:1px solid var(--st-border);background:#0e1218"></div>`}
+      <div>
+        <div class="nm">${g.name}</div>
+        <div class="tags">${g.members} members · ${g.disabled} disabled</div>
+      </div>`;
+    el.onclick = async ()=>{
+      const d = await (await fetch('/groups/'+encodeURIComponent(g.id))).json();
+      const membersHtml = d.members.map(m =>
+        `<div style="display:flex;gap:8px;align-items:center;margin:6px 0;opacity:${m.disabled?.valueOf()?0.5:1}">
+           ${m.avatar?`<img src="${m.avatar}" width="28" height="28" style="border-radius:50%;border:1px solid var(--st-border);object-fit:cover">`:'<div style="width:28px;height:28px;border-radius:50%;border:1px solid var(--st-border)"></div>'}
+           <div>${m.name}${m.disabled?' <span style="opacity:.7">(disabled)</span>':''}</div>
+         </div>`).join('');
+showDetailInSidebar(`
+  <h3>${d.name}</h3>
+  ${d.avatar?`<img src="${d.avatar}" style="max-width:120px;border-radius:12px;border:1px solid var(--st-border);margin:6px 0">`:''}
+  <div class="line"></div>
+  <div><b>Allow self responses:</b> ${d.allow_self_responses ? 'Yes':'No'}</div>
+  <div style="margin-top:10px"><b>Members</b></div>
+  ${membersHtml || '<i>No members</i>'}
+`);
+
+    };
+    list.appendChild(el);
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  // layout flags
+  document.getElementById('lb-close').addEventListener('click', hideLorePane);
+document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hideLorePane(); });
+
+  document.body.classList.add('with-sidebar');
+
+  // tab switching (runs once, after buttons exist)
+  document.querySelectorAll('#st-characters .tab').forEach(b=>{
+    b.onclick = ()=>{
+      document.querySelectorAll('#st-characters .tab').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      const show = b.dataset.tab;
+      document.getElementById('st-char-list').style.display = show==='chars' ? 'block':'none';
+      document.getElementById('st-lore-list').style.display = show==='lore' ? 'block':'none';
+      document.getElementById('st-group-list').style.display = show==='groups' ? 'block':'none';
+      document.getElementById('lore-pane').style.display = (show === 'lore' ? 'block' : 'none');
+      if (show !== 'lore') hideLorePane();
+
+    };
+  });
+
+  // initial data loads (call each ONCE)
+  loadChars();
+  loadLore();     // <-- sidebar lore (no modal)
+  loadGroups();
+  populateNameDropdown();
+  // chat bootstrap + polling
+  fetchChatHistory();                 // do an immediate pull
+  setInterval(fetchChatHistory, 2000);
+
+  // input handler
+const messageInput = document.getElementById('message');
+
+// grow on input
+messageInput.addEventListener('input', () => autosizeTextarea(messageInput));
+// initial sizing on load
+autosizeTextarea(messageInput);
+
+messageInput.addEventListener('keydown', async (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault(); // prevent newline
+    const message = messageInput.value.trim();
+    if (!message) return;
+    const name = document.getElementById('sender').value;
+
+    await fetch('/queue-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, name })
+    });
+
+    appendGhostUserMessage(name, message);
+    messageInput.value = '';
+    autosizeTextarea(messageInput);
+    return;
+  }
+  // if Shift+Enter, let the natural newline happen
+});
+
+});
+
+  </script>
 </body>
 </html>
