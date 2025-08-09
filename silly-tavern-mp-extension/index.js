@@ -25,6 +25,7 @@ function sendChatHistory() {
     console.log('No changes in chat history, not sending.');
     return;
   }
+
   lastChatHistoryString = JSON.stringify(getContext().chat);
 
   console.log('Sending chat history...');
@@ -81,14 +82,45 @@ function getQueuedMessages() {
   });
 }
 
-function sendMessageAs(name, message) {
-  console.log('Sending message as:', name, message);
-  $("#user_avatar_block .avatar-container").each((k, v) => {
-    v.innerText.toLowerCase().includes(name.toLowerCase()) ? v.click() : ''
-  });
-  $("#send_textarea").val(message);
+function getSelectedAvatarText() {
+  const sel = $('#user_avatar_block .avatar-container.selected');
+  return (sel.text() || '').trim();
+}
 
+function clickAvatarByName(name) {
+  if (!name) return false;
+  let found = false;
+  const target = name.trim().toLowerCase();
+  $("#user_avatar_block .avatar-container").each((_, v) => {
+    const label = ($(v).text() || '').trim().toLowerCase();
+    if (label === target || label.includes(target)) { $(v).click(); found = true; return false; }
+  });
+  return found;
+}
+
+function sendMessageAs(name, message) {
+  console.log('Sending (snap‑back):', name, message);
+
+  const previous = getSelectedAvatarText();
+  const switched = name && clickAvatarByName(name);
+
+  // put text in box and fire input so ST’s handlers run
+  $("#send_textarea").val(message).trigger('input');
+
+  // actually SEND (this appends the user message)
+  const $send = $("#send_but");
+  if ($send.length) {
+    $send.trigger('click');
+  } else {
+    // fallback for older builds
+    const e = $.Event('keydown', { key: 'Enter', which: 13 });
+    $("#send_textarea").trigger(e);
+  }
+
+  // snap persona back after ST queues the send
   setTimeout(() => {
-    getContext().generate();
-  },1000)
+    if (previous && previous.toLowerCase() !== (name || '').toLowerCase()) {
+      clickAvatarByName(previous);
+    }
+  }, 400);
 }
