@@ -5,11 +5,28 @@ const zlib = require('zlib');
 
 const app = express();
 
-/* ========= CONFIG =========
-   Point this at your SillyTavern data folder (where /characters and /lorebooks live).
-   Or set env: ST_DATA=/path/to/SillyTavern/data
-*/
-const ST_DATA = process.env.ST_DATA || path.resolve(__dirname, 'E:/Automatic1111-StableDiffusion/Silly Tavern/SillyTavern-1.13.2/data/default-user');
+// --- config loader ---
+const CFG_PATH = path.resolve(__dirname, 'config.json');
+
+function readJSON(file) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch { return null; }
+}
+
+const cfg = readJSON(CFG_PATH) || {};
+
+// precedence: ENV > config.json > default
+const ST_DATA = path.resolve(
+  process.env.ST_DATA || cfg.ST_DATA || cfg.st_data ||
+  'C:/SillyTavern-1.13.2/data/default-user'
+);
+
+const PORT = Number(process.env.PORT || cfg.PORT || cfg.port || 3000);
+
+// optional: log what was chosen
+console.log('[CFG] ST_DATA =', ST_DATA);
+console.log('[CFG] PORT    =', PORT);
+
 const CH_DIR = path.join(ST_DATA, 'characters');
 const LB_DIR = path.join(ST_DATA, 'lorebooks');
 const GROUPS_DIR = path.join(ST_DATA, 'groups');
@@ -434,7 +451,6 @@ app.get('/groups/:id', (req, res) => {
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // Start
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
